@@ -40,11 +40,6 @@ const connectToExternalWebSocket = () => {
 
     externalWs.on('open', () => {
         console.log(`✅ Connected to external WebSocket server at: ${EXTERNAL_WS_URL}`);
-        const payload = { 
-          message: 'Hello from backend server!', 
-          sender: 'ExpressAPI' 
-        };
-        externalWs.send(JSON.stringify(payload));
     });
 
     externalWs.on('message', (dataBuffer) => {
@@ -52,16 +47,11 @@ const connectToExternalWebSocket = () => {
         const messageString = dataBuffer.toString(); 
         const data = JSON.parse(messageString);      
         
-        if (data && data.message) {
-          console.log(`▶️ Response from External Server: ${data.message}`);
-        }
-        // Handle scan data (UID and timestamp) from ESP32
-        if(data.UID){
-          const Time = new Date(data.time);
-          const uid  = data.UID;
-          console.log('🔑 UID Received from External Server:', data.UID);
-          console.log('📅 Timestamp:', Time.toString() || 'N/A');
-        }
+        const UID = data.uid || 'Unknown UID';
+        const time = new Date(data.time);
+
+        console.log(`📩 Received from external WS - UID: ${UID}, Time: ${time.toISOString()}`);
+        
 
       } catch (error) {
         console.error('⚠️ Failed to parse incoming JSON. Raw message:', dataBuffer.toString());
