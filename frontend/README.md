@@ -1,16 +1,54 @@
-# React + Vite
+# Frontend Attendance System
+YOU SHOULD EXECUTE THE CREATION AND INSERT DATABASE SCRIPTS
+This is the frontend for the RFID-based attendance system, built with React and Vite. It provides the user interface to interact with the attendance data managed by the backend server.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Prerequisites
 
-Currently, two official plugins are available:
+Before you begin, ensure you have the following installed:
+*   [Node.js](https://nodejs.org/)
+*   [npm](https://www.npmjs.com/) (Node Package Manager)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Getting Started
 
-## React Compiler
+Follow these steps to get the frontend application up and running on your local machine.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 1. Navigate to the Frontend Directory
 
-## Expanding the ESLint configuration
+```bash
+cd systeme-call-par-rfid/frontend
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 2. Install Dependencies
+
+Run the following command to install the required node modules:
+
+```bash
+npm install
+```
+
+### 3. Environment Configuration
+
+The application requires a `.env` file in the `frontend` directory to connect to the backend API and WebSocket server. Create a file named `.env` and add the following content.
+
+*Note: These URLs should match the host and port where your backend and WebSocket servers are running.*
+
+```dotenv
+VITE_API_BASE_URL="http://localhost:3000/api"
+VITE_WEBSOCKET_URL="ws://localhost:8080"
+```
+
+### 4. Start the Development Server
+
+To start the Vite development server, run:
+
+```bash
+npm run dev
+```
+
+The application will be available at `http://localhost:5173` (or another port if 5173 is in use).
+
+## Features
+
+*   **User Dashboard**: View a list of all registered users.
+*   **Attendance Log**: See a complete history of all attendance records.
+*   **Real-Time Updates**: Attendance data is updated in real-time using WebSockets, providing instant feedback as users check in or out.

@@ -5,21 +5,25 @@ import MainContainer from "./Components/MainContainer";
 import Login from "./Components/Login";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { ThemeContext } from './Components/ThemeContext';
+
 function App() {
-  const { theme, toggleTheme } = useContext(ThemeContext);
-  const [isLogin, setIsLogin] = useState(!window.sessionStorage.getItem("email"));
+  const { theme } = useContext(ThemeContext);
+  // Use a slightly more robust check for session storage item
+  const [isLogin, setIsLogin] = useState(!!sessionStorage.getItem("email"));
   const navigate = useNavigate();
 
   // Handler
   const handleLogin = ({ isLogin, email }) => {
     if (isLogin) {
-      window.sessionStorage.setItem("email", email);
+      // Use sessionStorage for temporary login state
+      sessionStorage.setItem("email", email); 
       setIsLogin(true);
       navigate("/dashboard");
     }
   };
 
   useEffect(() => {
+    // Redirect logic based on login state
     if (isLogin) {
       navigate("/dashboard");
     } else {
@@ -40,15 +44,23 @@ function App() {
             <Route
               path="/dashboard"
               element={
-                <div className={`h-screen w-full flex flex-col ${theme !== 'dark' ? "bg-gray-100": "bg-gray-900"}`}>
-                  <header className={`h-16 flex-shrink-0 ${theme !== 'dark' ? "bg-white border-gray-200": "bg-gray-800 border-gray-700"} border-b`}>
+                <div className={`h-screen w-screen hidden sm:hidden md:flex flex-col ${theme !== 'dark' ? "bg-gray-100": "bg-gray-900"} transition-all duration-150`}>
+                  
+                  {/* --- Header --- */}
+                  <header className={`h-16 flex-shrink-0 border-b ${theme !== 'dark' ? "bg-white border-gray-200 shadow-sm": "bg-gray-800 border-gray-700 shadow-xl"}`}>
                     <HeaderComponent />
                   </header>
+                  
+                  {/* --- Main Content Area (Sidebar + Main) --- */}
                   <div className="flex flex-1 overflow-hidden">
-                    <main className="flex-1 overflow-y-auto p-6 lg:p-8">
+                    
+                    {/* --- Main Container --- */}
+                    <main className="flex-1 overflow-y-auto p-8">
                       <MainContainer />
                     </main>
-                    <aside className={`w-20 lg:w-64 flex-shrink-0 ${theme !== 'dark' ? 'bg-white border-gray-200': 'bg-gray-800 border-gray-700'} border-l overflow-y-auto`}>
+                    
+                    {/* --- Sidebar --- */}
+                    <aside className={`md:w-96 overflow-y-auto ${theme !== 'dark' ? 'bg-white': 'bg-gray-800'}`}>
                       <SidebarComponent />
                     </aside>
                   </div>

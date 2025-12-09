@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react'
-import { FectchLogin } from './API';
+import { login } from './API'
 import { ThemeContext } from './ThemeContext'; 
 
 const Login = ({ onLogin }) => {
@@ -11,7 +11,6 @@ const Login = ({ onLogin }) => {
     
 
     // Handlers functions:
-
     const handleSubmit = async (event) => {
         event.preventDefault(); 
         setError('');
@@ -28,7 +27,7 @@ const Login = ({ onLogin }) => {
         }
 
         try {
-            const response = await FectchLogin(email, password);
+            const response = await login(email, password);
             
             if(!response.status){
                 setError(response.error || "Email ou mot de passe incorrect.");
@@ -43,11 +42,11 @@ const Login = ({ onLogin }) => {
     }
 
   return (
-    <div className={`flex items-center justify-center min-h-screen p-4 ${theme !== 'dark' ? 'bg-gray-100' : 'bg-gray-900'} transition-all duration-150`}>
+    <div className={`hidden sm:hidden md:flex items-center justify-center min-h-screen p-4 ${theme !== 'dark' ? 'bg-gray-100' : 'bg-gray-900'} transition-all duration-150`}>
 
         <div className={`w-full max-w-sm p-8 rounded-xl shadow-2xl border ${theme !== 'dark' ? 'bg-white border-gray-100' : 'bg-gray-800 border-gray-700'}`}>
-            <h1 className={`text-3xl font-semibold mb-2 ${theme !== 'dark' ? 'text-gray-800' : 'text-white'}`}>Se Connecter</h1>
-            <p className={`mb-6 ${theme !== 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Connectez-vous pour contrôler les pointages</p>
+            <h1 className={`text-3xl font-semibold mb-2 ${theme !== 'dark' ? 'text-gray-800' : 'text-white'}`}>Log In</h1>
+            <p className={`mb-6 ${theme !== 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>connect to admin dashboard</p>
             {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4" role="alert">
                     <span className="block sm:inline">{error}</span>
