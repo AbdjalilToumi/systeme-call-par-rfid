@@ -145,4 +145,17 @@ VALUES
     ('A3B4C5D', '2025-12-06 17:00:00', 'out', 'on-time'),
     ('E0F1A2B', '2025-12-06 17:30:00', 'out', 'on-time'),
     ('C3D4E5F', '2025-12-06 16:45:00', 'out', 'early-leave');
+    
+    
+INSERT INTO Attendance (employeeId, timestamp, type, status) VALUES
+-- Employé E101 : Journée parfaite
+('E101', '2025-12-10 08:45:00', 'in', 'on-time'),
+('E101', '2025-12-10 17:00:00', 'out', 'on-time'),
 
+-- Employé E102 : Retard à l'arrivée
+('E102', '2025-12-10 09:05:00', 'in', 'late'),
+('E102', '2025-12-10 17:15:00', 'out', 'on-time'),
+
+-- Employé E103 : Départ anticipé
+('E103', '2025-12-10 08:58:00', 'in', 'on-time'),
+('E103', '2025-12-10 16:30:00', 'out', 'early-leave');

@@ -4,6 +4,7 @@ import { db } from '../db.js';
 export const getActiveEmployees = async (req, res) => {
     try {
         const [rows] = await db.execute("SELECT e.* FROM Employee e JOIN Attendance a ON e.id = a.employeeId WHERE e.isActive = 1 AND DATE(a.timestamp) = CURDATE();");
+        //const [rows] = await db.execute("SELECT e.* FROM Employee e JOIN Attendance a ON e.id = a.employeeId WHERE e.isActive = 1 AND DATE(a.timestamp) = '2025-12-04';");
         if(rows.length === 0){
             return res.status(404).json({ error: 'No active employees found' });
         }
