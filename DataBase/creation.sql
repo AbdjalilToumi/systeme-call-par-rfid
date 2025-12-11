@@ -8,7 +8,6 @@ CREATE TABLE Department (
     name VARCHAR(100) UNIQUE NOT NULL,
     description VARCHAR(255),
     location VARCHAR(100),
-    managerId VARCHAR(50),  -- Changed to VARCHAR(50) for compatibility
     workStartTime TIME NOT NULL,
     workEndTime TIME NOT NULL,
     gracePeriodMinutes INT DEFAULT 15
@@ -38,9 +37,9 @@ CREATE TABLE Attendance (
     employeeId VARCHAR(50) NOT NULL,
     timestamp DATETIME NOT NULL,
     type ENUM('in', 'out') NOT NULL,
-    status ENUM('on-time', 'late', 'early-leave', 'absent'),
-    FOREIGN KEY (employeeId) REFERENCES Employee(id) ON DELETE CASCADE,
-    INDEX idx_employee_timestamp (employeeId, timestamp)
+    status ENUM('on-time', 'late', 'early-leave', 'absent', 'leave'),
+    FOREIGN KEY (employeeId) REFERENCES Employee(id) ON DELETE CASCADE, -- La contrainte ON DELETE CASCADE est importante : si un employé est supprimé du système, tous ses enregistrements de présence sont automatiquement supprimés aussi.
+    INDEX idx_employee_timestamp (employeeId, timestamp) -- L'index idx_employee_timestamp accélère les requêtes fréquentes pour trouver les pointages d'un employé à une date donnée.
 ) ENGINE=InnoDB;
 
 -- Create Admin table
@@ -57,4 +56,3 @@ CREATE TABLE Admin (
 
 
 
-show tables;

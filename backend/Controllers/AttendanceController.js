@@ -1,18 +1,41 @@
 import { db } from '../db.js';
 
-export const getAttendanceStats = async (req, res) => {
-  const { period, startDate, endDate, departmentId } = req.query;
+// return the newly created record's data
+export const createAttendanceRecord = async ({ employeeId, timestamp, type, status }) => {
+  if (!employeeId || !timestamp || !type || !status) {
+    throw new Error('Missing required parameters for creating an attendance record');
+  }
+  console.log(employeeId, timestamp, type, status);
+  try {
+    const query = `
+      INSERT INTO Attendance (employeeId, timestamp, type, status) 
+      VALUES (?, ?, ?, ?);
+    `;
+    const [result] = await db.execute(query, [employeeId, timestamp, type, status]);
 
+    if (result.insertId) {
+      console.log(result.insertId);
+      return { id: result.insertId, employeeId, timestamp, type, status };
+    } else {
+      throw new Error('Failed to insert attendance record into the database.');
+    }
+  } catch (err) {
+    console.error("Create Attendance Record Error:", err);
+    throw new Error('Internal server error while creating attendance record');
+  }
+};
+
+export const getAttendanceStats = async ({ period, startDate, endDate, departmentId }) => {
   try {
     if (!period || !startDate || !endDate || !departmentId) {
-      return res.status(400).json({ error: 'Missing required query parameters' });
+      throw new Error('Missing required parameters for attendance stats');
     }
 
-    // 1. Fix Date Range: Ensure endDate covers the entire day (up to 23:59:59)
+    // ensure enddate cover the entire day (up to 23:59:59)
     const startDateTime = `${startDate} 00:00:00`;
     const endDateTime = `${endDate} 23:59:59`;
 
-    // 2. Fix Grouping: Use DATE_FORMAT to return a single string string that the Frontend can parse
+    // use DATE_FORMAT to return a single string that the Frontend can parse
     let groupByClause;
     switch (period) {
       case 'day':
@@ -28,7 +51,7 @@ export const getAttendanceStats = async (req, res) => {
         groupByClause = "DATE_FORMAT(a.timestamp, '%Y')";
         break;
       default:
-        return res.status(400).json({ error: 'Invalid period value' });
+        throw new Error(`Invalid period value: ${period}`);
     }
 
     const query = `
@@ -53,9 +76,9 @@ export const getAttendanceStats = async (req, res) => {
 
     const [rows] = await db.execute(query, [startDateTime, endDateTime, departmentId]);
 
-    return res.status(200).json({ message: 'Attendance stats retrieved successfully', data: rows });
+    return rows;
   } catch (err) {
     console.error("Attendance Stats Error:", err);
-    return res.status(500).json({ error: 'Internal server error' });
+    throw new Error('Internal server error while fetching attendance stats');
   }
 };

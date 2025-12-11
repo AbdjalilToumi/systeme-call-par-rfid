@@ -1,6 +1,8 @@
 import React, { useState, useContext } from 'react'
 import { login } from './API'
 import { ThemeContext } from './ThemeContext'; 
+import { connectWebSocket } from './websocket';
+
 
 const Login = ({ onLogin }) => {
     const { theme } = useContext(ThemeContext); 
@@ -33,7 +35,9 @@ const Login = ({ onLogin }) => {
                 setError(response.error || "Email ou mot de passe incorrect.");
             }
             else{
-               onLogin({isLogin: true, email: email});
+               window.sessionStorage.setItem('authToken', response.data.token);
+               connectWebSocket();
+               onLogin({ isLogin: true });
             }
         } catch (err) {
             console.error("Erreur lors de la tentative de connexion:", err);
@@ -94,13 +98,6 @@ const Login = ({ onLogin }) => {
                     Connexion
                 </button>
             </form>
-            
-            {/* Optionnel: Lien d'aide */}
-            {/* <div className="mt-4 text-center">
-                <a href="#" className="text-sm text-blue-600 hover:text-blue-700">
-                    Mot de passe oublié?
-                </a>
-            </div> */}
         </div>
     </div>
   )
