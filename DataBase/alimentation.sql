@@ -1,6 +1,7 @@
 -- I-- Disable foreign key checks for clean insertion/recreation if tables exist
 SET FOREIGN_KEY_CHECKS = 0;
 SET SQL_SAFE_UPDATES = 0;
+
 -- --- Insert sample Departments
 INSERT INTO Department (name, description, location, workStartTime, workEndTime, gracePeriodMinutes)
 VALUES 
@@ -159,3 +160,11 @@ INSERT INTO Attendance (employeeId, timestamp, type, status) VALUES
 -- Employé E103 : Départ anticipé
 ('E103', '2025-12-10 08:58:00', 'in', 'on-time'),
 ('E103', '2025-12-10 16:30:00', 'out', 'early-leave');
+
+-- les clé emplyées 
+INSERT INTO Employee (id, firstName, lastName, address, departmentId, hireDate, phone, email, isActive)
+VALUES 
+    ('7D25231', 'Abdeljalil', 'Et-toumi', 'Tamlalte', 2, '2023-01-01', '0687003027', 'abdjaliltoumi461@gmail.com', 1),
+    ('D32C4FE', 'Ahmed', 'essalhi', 'el kalaa des sraghna', 2, '2023-01-01', '0687003027', 'ahmedSalhi@gmail.com', 1),
+    ('E3F820A6', 'maryam fatiha', 'nohaila', 'Tamlalte', 2, '2023-01-01', '0687003027', 'nohaila@gmail.com', 1);
+

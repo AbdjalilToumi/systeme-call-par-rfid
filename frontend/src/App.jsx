@@ -9,14 +9,12 @@ import { ThemeContext } from './Components/ThemeContext';
 function App() {
   const { theme } = useContext(ThemeContext);
   // Use a slightly more robust check for session storage item
-  const [isLogin, setIsLogin] = useState(!!sessionStorage.getItem("email"));
+  const [isLogin, setIsLogin] = useState(!!sessionStorage.getItem("authToken"));
   const navigate = useNavigate();
 
   // Handler
-  const handleLogin = ({ isLogin, email }) => {
+  const handleLogin = ({ isLogin }) => {
     if (isLogin) {
-      // Use sessionStorage for temporary login state
-      sessionStorage.setItem("email", email); 
       setIsLogin(true);
       navigate("/dashboard");
     }

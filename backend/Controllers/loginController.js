@@ -1,7 +1,11 @@
 import { db } from '../db.js';
 import path from 'path';
 import fs from 'fs';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+dotenv.config();
 
+// Handle Login
 export const login = async (req, res) => {
   if (!req.body) {
     return res.status(400).json({ error: 'Request information is missing' });
@@ -9,6 +13,7 @@ export const login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
+
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
@@ -23,22 +28,29 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    // Get the image file path and build a public URL for the client
+    // get the image file path and build a public URL for the client
     const imagePath = path.join(process.cwd(), rows[0].imagePath);
 
-    // Check if the image file exists
+    // check if the image file exists
     if (!fs.existsSync(imagePath)) {
       return res.status(404).json({ error: 'Image file not found' });
     }
 
-    // Build a URL path for the client to fetch the image (served statically)
+    // Login successful:
+    // generate a JWT token
+    const token = jwt.sign({
+      email: rows[0].email,
+    }, process.env.JWT_SECRET);
+
+    // build a URL path for the client to fetch the image
     const imageFilename = path.basename(rows[0].imagePath);
     const imageUrl = `/profileImage/${imageFilename}`;
 
-    // Return JSON with image URL and admin info (client can request image first)
+    // return JSON with image URL and admin info
     return res.status(200).json({
       message: 'Login successful',
-      email: rows[0].email,
+      token: token,
+      email: email,
       firstName: rows[0].firstName,
       lastName: rows[0].lastName,
       imageUrl

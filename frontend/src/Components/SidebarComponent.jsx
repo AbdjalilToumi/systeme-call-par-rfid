@@ -1,209 +1,300 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { ThemeContext } from './ThemeContext';
-import { getActiveEmployees, getDepartements, API_BASE } from './API'
-import { FaSearch, FaCircle } from 'react-icons/fa';
-import { BiChevronDown } from 'react-icons/bi';
+import { getActiveEmployees, getDepartements, API_BASE } from './API';
+import { FiSearch, FiFilter, FiUser, FiClock } from 'react-icons/fi'; // Cleaner icons
+import { BiChevronDown, BiLogOutCircle } from 'react-icons/bi';
 
 const SidebarComponent = () => {
   const { theme } = useContext(ThemeContext);
   
-  // State for data
+  // State
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // State for filters
+  
+  // Filters
   const [selectedDept, setSelectedDept] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
-  
-  // Filter Logic
-  const filteredEmployees = employees.filter(emp => {
-    const matchesDept = selectedDept === 'All' || emp.departmentId === parseInt(selectedDept);
-    const fullName = `${emp.firstName} ${emp.lastName}`.toLowerCase();
-    const matchesSearch = fullName.includes(searchQuery.toLowerCase());
-    return matchesDept && matchesSearch;
-  });
+  // --- Helpers & Config ---
 
-
-  // Calculate Status Counts for the Header
-  const totalPresent = employees.length;
-  const onTimeCount = employees.filter(e => e.status === 'On Time').length;
-  const lateCount = employees.filter(e => e.status === 'Late').length;
-
-  // Helper to lookup Dept Name
-  const getDeptName = (id) => {
-    console.log('Departments:', departments);
-    const dept = departments.find(d => d.id === id);
-    return dept ? dept.name : 'Unknown Department';
+  // Status Configuration (Colors and Labels)
+  const getStatusConfig = (status) => {
+    switch (status) {
+      case 'on-time': return { color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', label: 'On Time' };
+      case 'late': return { color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', label: 'Late' };
+      case 'early-leave': return { color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400', label: 'Early Leave' };
+      case 'absent': return { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', label: 'Absent' };
+      case 'leave': return { color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', label: 'On Leave' };
+      default: return { color: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300', label: 'Present' };
+    }
   };
+
+  const getInitials = (firstName, lastName) => {
+    return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
+  };
+
+  const formatTime = (timeInput) => {
+    if (!timeInput) return '--:--';
+    // If it's already a formatted string like "09:00", return it
+    if (typeof timeInput === 'string' && timeInput.includes(':') && timeInput.length <= 8) return timeInput;
+    
+    // Otherwise parse date
+    const date = new Date(timeInput);
+    return isNaN(date.getTime()) 
+      ? '--:--' 
+      : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // --- Data Processing (Memoized) ---
+
+  const filteredEmployees = useMemo(() => {
+    return employees.filter(emp => {
+      const matchesDept = selectedDept === 'All' || emp.departmentId === parseInt(selectedDept);
+      const fullName = `${emp.firstName} ${emp.lastName}`.toLowerCase();
+      const matchesSearch = fullName.includes(searchQuery.toLowerCase());
+      return matchesDept && matchesSearch;
+    });
+  }, [employees, selectedDept, searchQuery]);
+
+  const stats = useMemo(() => {
+    return {
+      total: employees.length,
+      onTime: employees.filter(e => e.status === 'on-time').length,
+      late: employees.filter(e => e.status === 'late').length,
+      earlyLeave: employees.filter(e => e.status === 'early-leave').length,
+      other: employees.filter(e => !['on-time', 'late', 'early-leave'].includes(e.status)).length
+    };
+  }, [employees]);
+
+  const departmentLookup = useMemo(() => {
+    const lookup = {};
+    departments.forEach(d => { lookup[d.id] = d.name; });
+    return lookup;
+  }, [departments]);
+
+  // --- Effects ---
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [empRes, deptRes] = await Promise.all([
+        getActiveEmployees(),
+        getDepartements()
+      ]);
+
+      if (deptRes.status === 'success' || Array.isArray(deptRes)) {
+          // Handle if api returns object with data property or direct array
+          const data = deptRes.data || deptRes; 
+          setDepartments(data);
+      }
+
+      if (empRes.status === 'success' || Array.isArray(empRes)) {
+          const data = empRes.data || empRes;
+          // Process initial data
+          const processed = Array.isArray(data) ? data.map(emp => ({
+            ...emp,
+            imageUrl: emp.imagePath ? `${API_BASE}/${emp.imagePath}` : null,
+            // Fallback if backend doesn't return status/time on this specific endpoint
+            status: emp.status || 'present', 
+            loginTime: emp.timestamp || new Date() 
+          })) : [];
+          setEmployees(processed);
+      } else {
+          setEmployees([]);
+      }
+    } catch (err) {
+      setError('Connection lost');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []); // Empty dependency array is fine here as it has no external dependencies.
+
   useEffect(() => {
-      const fetchData = async () => {
-        try {
-          setLoading(true);
-          
-          // Parallel fetching for efficiency
-          const [empRes, deptRes] = await Promise.all([
-            getActiveEmployees(),
-            getDepartements()
-          ]);
-  
-          
-          if (deptRes.status) {
-            setDepartments(deptRes.data);
-          }
-  
-          if (empRes.status) {
+    fetchData();
 
-            const processedData = empRes.data.map(emp => ({
-              ...emp,
-              // Construct full image URL
-              imageUrl: emp.imagePath ? `${API_BASE}/${emp.imagePath}` : null, 
-              // Mocking data usually found in Attendance table
-              loginTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              status: Math.random() > 0.3 ? 'On Time' : 'Late' 
-            }));
-            setEmployees(processedData);
-          } else {
-              // If 404 (no active employees), just set empty array
-              setEmployees([]);
-          }
-        } catch (err) {
-          setError('Failed to load dashboard data');
-          console.error(err);
-        } finally {
-          setLoading(false);
-        }
-      };
-  
+    // Event Listener for real-time updates
+    const handlePresenceUpdate = () => {
       fetchData();
-    }, []);
+    };
+
+    window.addEventListener('presenceUpdate', handlePresenceUpdate);
+    return () => window.removeEventListener('presenceUpdate', handlePresenceUpdate);
+  }, [fetchData]);
+
+  // --- Render Sub-components ---
+  console.log(departments);
+  console.log(employees);
+  const SkeletonLoader = () => (
+    <div className="animate-pulse space-y-4">
+      {[1, 2, 3, 4].map(i => (
+        <div key={i} className="flex items-center space-x-3 p-3">
+          <div className="rounded-full bg-gray-200 dark:bg-gray-700 h-10 w-10"></div>
+          <div className="flex-1 space-y-2">
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+            <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  // --- Main Render ---
+
   return (
-    <div className={`h-full flex flex-col w-64 xl:w-80 shadow-lg ${theme !== 'dark' ? 'bg-white border-gray-100' : 'bg-gray-800 border-gray-700'} transition-all duration-300`}>
+    <div className={`h-full flex flex-col w-72 xl:w-80 shadow-2xl transition-colors duration-300 ${theme === 'dark' ? 'bg-gray-900 border-r border-gray-800' : 'bg-white border-r border-gray-100'}`}>
       
-      {/* --- Header Section --- */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex justify-between items-center mb-4">
-          {/* **Style Changes for Title:** Use a slightly larger size and bolder weight for the title. */}
-          <h2 className={`text-xl font-extrabold ${theme !== 'dark' ? 'text-gray-900' : 'text-white'}`}>
-            Employees Logged In
+      {/* 1. Header & Stats */}
+      <div className={`p-5 pb-2 ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'} z-10`}>
+        <div className="flex justify-between items-baseline mb-4">
+          <h2 className={`text-xl font-bold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>
+            Live Attendance
           </h2>
-        </div>
-        
-        {/* Mini Stats (Moved above Department Filter for quick visibility) */}
-        {/* **Style Changes for Mini Stats:** Better spacing and distinct color pills. */}
-        <div className="flex space-x-3 text-xs mb-4">
-          <span className={`px-2 py-0.5 rounded-full font-semibold ${theme !== 'dark' ? 'bg-green-100 text-green-700' : 'bg-green-900 text-green-400'}`}>
-            On Time ({onTimeCount})
-          </span>
-          <span className={`px-2 py-0.5 rounded-full font-semibold ${theme !== 'dark' ? 'bg-orange-100 text-orange-700' : 'bg-orange-900 text-orange-400'}`}>
-            Late ({lateCount})
-          </span>
-          <span className={`px-2 py-0.5 rounded-full font-semibold ${theme !== 'dark' ? 'bg-gray-100 text-gray-700' : 'bg-gray-700 text-gray-400'}`}>
-            Total ({totalPresent})
+          <span className={`text-xs font-semibold px-2 py-1 rounded-md ${theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+            {stats.total} Present
           </span>
         </div>
 
-        {/* Search Bar */}
-        {/* **Style Changes for Search Bar:** Slightly deeper background, smoother rounded corners. */}
-        <div className={`flex items-center px-3 py-2 rounded-xl mb-4 ${theme !== 'dark' ? 'bg-gray-100' : 'bg-gray-700'}`}>
-          <FaSearch className="text-gray-400 mr-2 w-3.5 h-3.5" />
-          <input 
-            type="text" 
-            placeholder="Search employees..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full bg-transparent text-sm focus:outline-none placeholder-gray-400 ${theme !== 'dark' ? 'text-gray-700' : 'text-gray-200'}`}
-          />
+        {/* Stats Grid */}
+        <div className="grid grid-cols-3 gap-2 mb-4">
+           <div className={`flex flex-col items-center justify-center p-2 rounded-xl border ${theme === 'dark' ? 'bg-emerald-900/10 border-emerald-900/30' : 'bg-emerald-50 border-emerald-100'}`}>
+              <span className="text-lg font-bold text-emerald-500">{stats.onTime}</span>
+              <span className="text-[10px] uppercase tracking-wider text-emerald-600/70 font-bold">On Time</span>
+           </div>
+           <div className={`flex flex-col items-center justify-center p-2 rounded-xl border ${theme === 'dark' ? 'bg-orange-900/10 border-orange-900/30' : 'bg-orange-50 border-orange-100'}`}>
+              <span className="text-lg font-bold text-orange-500">{stats.late}</span>
+              <span className="text-[10px] uppercase tracking-wider text-orange-600/70 font-bold">Late</span>
+           </div>
+           <div className={`flex flex-col items-center justify-center p-2 rounded-xl border ${theme === 'dark' ? 'bg-yellow-900/10 border-yellow-900/30' : 'bg-yellow-50 border-yellow-100'}`}>
+              <span className="text-lg font-bold text-yellow-500">{stats.earlyLeave}</span>
+              <span className="text-[10px] uppercase tracking-wider text-yellow-600/70 font-bold">Early</span>
+           </div>
         </div>
 
-        {/* Department Filter Dropdown (Moved to bottom of header) */}
-        <div className="relative">
-          <select 
-            value={selectedDept}
-            onChange={(e) => setSelectedDept(e.target.value)}
-            // **Style Changes for Select:** Matched the input field style for consistency.
-            className={`appearance-none text-sm font-medium w-full pr-8 pl-3 py-2 rounded-xl cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme !== 'dark' ? 'text-gray-700 bg-gray-100 border border-transparent' : 'text-gray-300 bg-gray-700 border border-gray-600'}`}
-          >
-            <option value="All">All Departments</option>
-            {departments.map(dept => (
-              <option key={dept.id} value={dept.id}>{dept.name}</option>
-            ))}
-          </select>
-          {/* **Style Changes for Icon:** Adjusted position and size. */}
-          <BiChevronDown className={`absolute right-3 top-2.5 pointer-events-none w-4 h-4 ${theme !== 'dark' ? 'text-gray-500' : 'text-gray-400'}`} />
+        {/* Search & Filter */}
+        <div className="space-y-3">
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <FiSearch className="text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+            </div>
+            <input 
+              type="text" 
+              placeholder="Search employee..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={`block w-full pl-10 pr-3 py-2.5 text-sm rounded-xl transition-all outline-none border ${
+                theme === 'dark' 
+                ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-blue-500' 
+                : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-50'
+              }`}
+            />
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <FiFilter className="text-gray-400" />
+            </div>
+            <select 
+              value={selectedDept}
+              onChange={(e) => setSelectedDept(e.target.value)}
+              className={`appearance-none block w-full pl-10 pr-8 py-2.5 text-sm rounded-xl cursor-pointer outline-none border ${
+                theme === 'dark' 
+                ? 'bg-gray-800 border-gray-700 text-gray-300 focus:border-blue-500' 
+                : 'bg-gray-50 border-gray-200 text-gray-700 focus:bg-white focus:border-blue-400'
+              }`}
+            >
+              <option value="All">All Departments</option>
+              {departments.map(dept => (
+                <option key={dept.id} value={dept.id}>{dept.name}</option>
+              ))}
+            </select>
+            <BiChevronDown className="absolute right-3 top-3 text-gray-400 pointer-events-none" />
+          </div>
         </div>
       </div>
 
-      {/* --- List Section --- */}
-      {/* **Style Changes for List Container:** Added a clear max height with padding. */}
-      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+      {/* 2. Employee List */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4 custom-scrollbar">
         {loading ? (
-           <p className="text-center text-gray-500 mt-10 text-sm">Loading active employees...</p>
+           <SkeletonLoader />
         ) : error ? (
-           <p className="text-center text-red-500 mt-10 text-sm">{error}</p>
+           <div className="flex flex-col items-center justify-center h-40 text-red-500 text-sm">
+             <BiLogOutCircle className="w-6 h-6 mb-2" />
+             {error}
+           </div>
         ) : filteredEmployees.length === 0 ? (
-           <p className="text-center text-gray-500 mt-10 text-sm">No active employees found matching your criteria.</p>
+           <div className="text-center py-10 opacity-50">
+             <FiUser className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+             <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>No active employees found.</p>
+           </div>
         ) : (
-          // **Style Changes for List:** Increased vertical spacing.
-          <div className="space-y-3">
-            {filteredEmployees.map((emp, index) => (
-              // **Style Changes for Item:** Added hover effects, padding, and subtle rounded corners for a cleaner look.
-              <div key={index} className={`flex items-start p-2 rounded-lg cursor-pointer transition duration-150 ease-in-out ${theme !== 'dark' ? 'hover:bg-gray-50' : 'hover:bg-gray-700'}`}>
-                
-                {/* Avatar and Indicator */}
-                <div className="relative flex-shrink-0 mr-3">
-                  {/* <img 
-                    src={emp.imageUrl || "https://via.placeholder.com/40"} 
-                    alt={emp.firstName}
-                    // **Style Changes for Image:** Consistent size and ring.
-                    className="w-10 h-10 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-700"
-                    onError={(e) => { e.target.src = "https://via.placeholder.com/40"; }}
-                  /> */}
-                  {/* Online Indicator Dot */}
-                  {/* **Style Changes for Dot:** Slightly bigger dot for better visibility. */}
-                  <span className={`absolute bottom-0 right-0 block h-3 w-3 rounded-full ring-2 ${theme !== 'dark' ? 'ring-white' : 'ring-gray-800'} ${emp.status === 'Late' ? 'bg-orange-500' : 'bg-green-500'}`}></span>
-                </div>
+          <div className="space-y-3 mt-2">
+            {filteredEmployees.map((emp) => {
+              const statusInfo = getStatusConfig(emp.status);
+              
+              return (
+                <div 
+                  key={emp.id} 
+                  className={`group relative flex items-center p-3 rounded-2xl border transition-all duration-200 hover:shadow-md ${
+                    theme === 'dark' 
+                    ? 'bg-gray-800 border-gray-700 hover:border-gray-600' 
+                    : 'bg-white border-gray-100 hover:border-blue-200'
+                  }`}
+                >
+                  {/* Avatar */}
+                  <div className="relative flex-shrink-0 mr-4">
+                    {emp.imageUrl ? (
+                      <img 
+                        src={emp.imageUrl} 
+                        alt={emp.firstName} 
+                        className="w-12 h-12 rounded-xl object-cover shadow-sm bg-gray-200"
+                        onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                      />
+                    ) : null}
+                     {/* Fallback Initials (shown if no image or error) */}
+                    <div 
+                      className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm"
+                      style={{ display: emp.imageUrl ? 'none' : 'flex' }}
+                    >
+                      {getInitials(emp.firstName, emp.lastName)}
+                    </div>
 
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start">
-                    {/* **Style Changes for Name:** Slightly smaller size and more consistent color. */}
-                    <p className={`text-sm font-semibold truncate ${theme !== 'dark' ? 'text-gray-800' : 'text-gray-100'}`}>
-                      {emp.firstName} {emp.lastName}
+                    {/* Online Dot */}
+                    <span className="absolute -bottom-1 -right-1 flex h-4 w-4">
+                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${emp.status === 'late' ? 'bg-orange-400' : 'bg-green-400'}`}></span>
+                      <span className={`relative inline-flex rounded-full h-4 w-4 border-2 ${theme === 'dark' ? 'border-gray-800' : 'border-white'} ${emp.status === 'late' ? 'bg-orange-500' : 'bg-green-500'}`}></span>
+                    </span>
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start mb-0.5">
+                      <h3 className={`text-sm font-bold truncate pr-2 ${theme === 'dark' ? 'text-gray-100' : 'text-gray-800 group-hover:text-blue-600'}`}>
+                        {emp.firstName} {emp.lastName}
+                      </h3>
+                      
+                      <div className="flex items-center text-xs font-medium text-gray-400 dark:text-gray-500">
+                         <FiClock className="w-3 h-3 mr-1" />
+                         {formatTime(emp.loginTime)}
+                      </div>
+                    </div>
+
+                    <p className={`text-xs truncate mb-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                       {departmentLookup[emp.departmentId] || 'Unknown Dept'}
                     </p>
-                    
-                    {/* Status Text (Right aligned) */}
-                    {/* **Style Changes for Status Text:** Cleaned up to use status as the primary color. */}
-                    <div className="flex items-center space-x-1">
-                      <FaCircle className={`w-1 h-1 ${emp.status === 'Late' ? 'text-orange-500' : 'text-green-500'}`} />
-                      <span className={`text-xs font-medium ${emp.status === 'Late' ? 'text-orange-500' : 'text-green-500'}`}>
-                        {emp.status}
-                      </span>
+
+                    {/* Status Badge */}
+                    <div className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${statusInfo.color}`}>
+                       {statusInfo.label}
                     </div>
                   </div>
-
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                     {getDeptName(emp.departmentId)} 
-                  </p>
-
-                  <div className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                    <span className="font-mono">Login: {emp.loginTime}</span>
-                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
-      </div>
-
-      {/* --- Footer / View All Link --- */}
-      {/* **Style Changes for Footer:** More pronounced button style. */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 text-center">
-        <button className="w-full text-sm py-2 rounded-lg font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-blue-400 transition duration-150">
-          View all employees
-        </button>
       </div>
     </div>
   );
