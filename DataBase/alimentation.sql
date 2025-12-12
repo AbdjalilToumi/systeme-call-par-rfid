@@ -168,3 +168,11 @@ VALUES
     ('D32C4FE', 'Ahmed', 'essalhi', 'el kalaa des sraghna', 2, '2023-01-01', '0687003027', 'ahmedSalhi@gmail.com', 1),
     ('E3F820A6', 'maryam fatiha', 'nohaila', 'Tamlalte', 2, '2023-01-01', '0687003027', 'nohaila@gmail.com', 1);
 
+-- This data for testing all fonctinalité 
+-- INSERT INTO Attendance (employeeId, timestamp, type, status) 
+-- VALUES 
+--     ('7D25231', '2025-12-12 00:47:15', 'out', 'on-time'),
+--     ('D32C4FE', '2025-12-12 00:47:15', 'out', 'absent'),
+--     ('E3F820A6', '2025-12-12 01:42:15', 'out', 'late'),
+--     ('7D25231', '2025-12-12 01:42:15', 'out', 'early-leave'),
+--     ('E3F820A6', '2025-12-12 01:42:15', 'out', 'early-leave');

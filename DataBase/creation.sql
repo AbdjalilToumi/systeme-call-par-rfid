@@ -52,7 +52,3 @@ CREATE TABLE Admin (
     passwordHash VARCHAR(255) NOT NULL,
     imagePath VARCHAR(255)
 ) ENGINE=InnoDB;
-
-
-
-
