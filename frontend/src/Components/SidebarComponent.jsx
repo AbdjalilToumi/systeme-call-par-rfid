@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { ThemeContext } from './ThemeContext';
-import { getActiveEmployees, getDepartements, API_BASE } from './API';
+import { getActiveEmployees, getDepartements } from './API';
 import { FiSearch, FiFilter, FiUser, FiClock } from 'react-icons/fi'; // Cleaner icons
 import { BiChevronDown, BiLogOutCircle } from 'react-icons/bi';
 
@@ -13,13 +13,11 @@ const SidebarComponent = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Filters
+  // filters
   const [selectedDept, setSelectedDept] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // --- Helpers & Config ---
-
-  // Status Configuration (Colors and Labels)
+  // status configuration (Colors and Labels)
   const getStatusConfig = (status) => {
     switch (status) {
       case 'on-time': return { color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', label: 'On Time' };
@@ -37,18 +35,15 @@ const SidebarComponent = () => {
 
   const formatTime = (timeInput) => {
     if (!timeInput) return '--:--';
-    // If it's already a formatted string like "09:00", return it
     if (typeof timeInput === 'string' && timeInput.includes(':') && timeInput.length <= 8) return timeInput;
     
-    // Otherwise parse date
     const date = new Date(timeInput);
     return isNaN(date.getTime()) 
       ? '--:--' 
       : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // --- Data Processing (Memoized) ---
-
+  // data processins
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => {
       const matchesDept = selectedDept === 'All' || emp.departmentId === parseInt(selectedDept);
@@ -75,7 +70,6 @@ const SidebarComponent = () => {
   }, [departments]);
 
   // --- Effects ---
-
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -84,19 +78,17 @@ const SidebarComponent = () => {
         getDepartements()
       ]);
 
-      if (deptRes.status === 'success' || Array.isArray(deptRes)) {
-          // Handle if api returns object with data property or direct array
-          const data = deptRes.data || deptRes; 
+      
+      if (deptRes.status === true || Array.isArray(deptRes)) {
+          const data = deptRes.data; 
           setDepartments(data);
       }
 
-      if (empRes.status === 'success' || Array.isArray(empRes)) {
-          const data = empRes.data || empRes;
+      if (empRes.status === true || Array.isArray(empRes)) {
+          const data = empRes.data;
           // Process initial data
           const processed = Array.isArray(data) ? data.map(emp => ({
             ...emp,
-            imageUrl: emp.imagePath ? `${API_BASE}/${emp.imagePath}` : null,
-            // Fallback if backend doesn't return status/time on this specific endpoint
             status: emp.status || 'present', 
             loginTime: emp.timestamp || new Date() 
           })) : [];
@@ -110,7 +102,7 @@ const SidebarComponent = () => {
     } finally {
       setLoading(false);
     }
-  }, []); // Empty dependency array is fine here as it has no external dependencies.
+  }, []); 
 
   useEffect(() => {
     fetchData();
@@ -125,8 +117,6 @@ const SidebarComponent = () => {
   }, [fetchData]);
 
   // --- Render Sub-components ---
-  console.log(departments);
-  console.log(employees);
   const SkeletonLoader = () => (
     <div className="animate-pulse space-y-4">
       {[1, 2, 3, 4].map(i => (
@@ -141,8 +131,8 @@ const SidebarComponent = () => {
     </div>
   );
 
-  // --- Main Render ---
 
+  // --- Main Render ---
   return (
     <div className={`h-full flex flex-col w-72 xl:w-80 shadow-2xl transition-colors duration-300 ${theme === 'dark' ? 'bg-gray-900 border-r border-gray-800' : 'bg-white border-r border-gray-100'}`}>
       
@@ -231,12 +221,12 @@ const SidebarComponent = () => {
            </div>
         ) : (
           <div className="space-y-3 mt-2">
-            {filteredEmployees.map((emp) => {
+            {filteredEmployees.map((emp, index) => {
               const statusInfo = getStatusConfig(emp.status);
               
               return (
                 <div 
-                  key={emp.id} 
+                  key={index} 
                   className={`group relative flex items-center p-3 rounded-2xl border transition-all duration-200 hover:shadow-md ${
                     theme === 'dark' 
                     ? 'bg-gray-800 border-gray-700 hover:border-gray-600' 
@@ -245,27 +235,11 @@ const SidebarComponent = () => {
                 >
                   {/* Avatar */}
                   <div className="relative flex-shrink-0 mr-4">
-                    {emp.imageUrl ? (
-                      <img 
-                        src={emp.imageUrl} 
-                        alt={emp.firstName} 
-                        className="w-12 h-12 rounded-xl object-cover shadow-sm bg-gray-200"
-                        onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                      />
-                    ) : null}
-                     {/* Fallback Initials (shown if no image or error) */}
                     <div 
                       className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm"
-                      style={{ display: emp.imageUrl ? 'none' : 'flex' }}
                     >
                       {getInitials(emp.firstName, emp.lastName)}
                     </div>
-
-                    {/* Online Dot */}
-                    <span className="absolute -bottom-1 -right-1 flex h-4 w-4">
-                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${emp.status === 'late' ? 'bg-orange-400' : 'bg-green-400'}`}></span>
-                      <span className={`relative inline-flex rounded-full h-4 w-4 border-2 ${theme === 'dark' ? 'border-gray-800' : 'border-white'} ${emp.status === 'late' ? 'bg-orange-500' : 'bg-green-500'}`}></span>
-                    </span>
                   </div>
 
                   {/* Info */}

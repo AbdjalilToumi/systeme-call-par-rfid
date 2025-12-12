@@ -3,14 +3,14 @@
 #include <WebSocketsServer.h>
 #include <ESP8266HTTPClient.h> 
 #include <ArduinoJson.h>
-#include <time.h>       // Native time library
-#include <sys/time.h>   // Struct timeval
+#include <time.h>       
+#include <sys/time.h> 
 
 // --- CONFIGURATION WI-FI ---
 const char* ssid = "HUAWEI-2.4G-96As"; 
 const char* password = "CNcnKK28"; 
 
-// --- CONFIGURATION TEMPS
+// --- CONFIGURATION 
 const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 0; 
 

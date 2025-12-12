@@ -3,7 +3,7 @@ import { db } from '../db.js';
 // get all active employees present today
 export const getActiveEmployees = async () => {
     try {
-        const [rows] = await db.execute("SELECT e.* FROM Employee e JOIN Attendance a ON e.id = a.employeeId WHERE e.isActive = 1 AND DATE(a.timestamp) = CURDATE();");
+        const [rows] = await db.execute("SELECT e.*, a.status, a.timestamp FROM Employee e JOIN Attendance a ON e.id = a.employeeId WHERE e.isActive = 1 AND DATE(a.timestamp) = CURDATE();");
         return rows;
     } catch (err) {
         console.error(err);
@@ -28,7 +28,7 @@ export const getEmpleyesAtDate = async (date) => {
     }
 }
 
-
+// get employees grace time
 export const getEmployeGracePeriod = async (employeID) => {
     if (!employeID) {
         throw new Error('Employee ID parameter is missing');
@@ -36,7 +36,7 @@ export const getEmployeGracePeriod = async (employeID) => {
     try{
         const [rows] = await db.execute("SELECT d.gracePeriodMinutes FROM Employee e JOIN Department d ON e.departmentId = d.id WHERE e.id = ?;", [employeID]);
         if (rows.length === 0) {
-            return 15; // Or throw an error if an employee should always be found
+            return 15;
         }
         return rows[0];
     } catch(err) {
